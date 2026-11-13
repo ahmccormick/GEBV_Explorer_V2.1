@@ -1,22 +1,22 @@
-# GEBV Explorer (v2)
+# GEBV Explorer v2.1
 
 Interactive visualization of genomic estimated breeding values (GEBVs) for Capsicum (pepper) crops. A single unified app covering both the core and global collections, with AI-assisted filtering and multi-trait selection indices.
 
-![App screenshot](images/screenshot.png)
+
 
 ## Features
 
 - **Collection Toggle**: Switch between the Core Collection (n=397) and Global Collection (n=7,843) from the sidebar
 - **Interactive Sliders**: Filter lines by any GEBV trait using sidebar threshold sliders
 - **Chat with Data Filtering**: Use natural language to adjust filters or rank lines (e.g., "Show me the top 10% for yield", "Rank lines prioritising yield and Brix")
-- **Genomic Selection Index**: Accuracy-adjusted ranking using `b = (RGR)⁻¹RGa` — accounts for genetic covariance between traits and unequal prediction accuracies
+- **Genomic Selection Index**: Accuracy-adjusted ranking using `b = (RGR)⁻¹RGa` — accounts for covariance among predicted GEBVs and unequal prediction accuracies
 - **Weighted Selection Index**: Simple z-score weighted ranking `I = Σ(wⱼ × zᵢⱼ)` — straightforward weighted composite score
 - **Scatter Plot**: Explore any two-trait scatterplot with filtered points highlighted
 - **CSV Export**: Download filtered lines or index results as CSV
 
 ---
 
-## Running with Docker (Recommended)
+## Running with Docker
 
 Docker bundles everything — no Python setup, no virtual environments, no dependency conflicts.
 
@@ -28,13 +28,13 @@ Docker bundles everything — no Python setup, no virtual environments, no depen
 
 **1. Clone the repository**
 ```bash
-git clone https://github.com/GEBV-collab/GEBV_Explorer_V2.git
-cd GEBV_Explorer_V2
+git clone https://github.com/ahmccormick/GEBV_Explorer_V2.1.git
+cd GEBV_Explorer_V2.1
 ```
 
 **2. Start the app**
 ```bash
-docker compose up
+docker compose up --build
 ```
 
 The app will be available at **http://localhost:8501**
@@ -56,40 +56,28 @@ echo "ANTHROPIC_API_KEY=your-api-key-here" > .env
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/GEBV-collab/GEBV_Explorer_V2.git
-cd GEBV_Explorer_V2
+git clone https://github.com/ahmccormick/GEBV_Explorer_V2.1.git
+cd GEBV_Explorer_V2.1
 ```
 
 ### 2. Create and activate a virtual environment (Python 3.12)
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
+On Windows, activate with `.venv\Scripts\activate` and use Git Bash for the startup script, or start the Python services separately.
 
-### 3. Install dependencies
+### 3. Start the app
 ```bash
-pip install -r requirements.txt
+bash start_core.sh
 ```
+This starts the core API, global API and Streamlit interface. Open **http://localhost:8501**.
+Enter an Anthropic API key in the app sidebar to enable chat. Manual filtering and index calculations do not require an API key.
 
-### 4. Set up API key (required for Chat)
-```bash
-echo "ANTHROPIC_API_KEY=your-api-key-here" > .env
-```
+For subsequent sessions, activate `.venv` before starting. If you move the folder, recreate the virtual environment at the new location.
 
-### 5. Start both API servers and the app
-
-```bash
-# Terminal 1: Core API server (port 5001)
-python gebv_api_server.py
-
-# Terminal 2: Global API server (port 5002)
-python global/global_api_server.py
-
-# Terminal 3: Streamlit app
-streamlit run GEBV_app.py
-```
-
-Opens at **http://localhost:8501**
+The current startup script can leave background API processes running after Streamlit stops. If ports 5001 or 5002 are occupied on macOS, inspect them with `lsof -nP -iTCP:5001 -iTCP:5002 -sTCP:LISTEN` and stop only the identified app processes before restarting.
 
 ---
 
@@ -115,14 +103,14 @@ Use natural language commands to adjust filters or rank lines:
 ### Genomic Selection Index
 Ranks all lines using an accuracy-adjusted genomic index `b = (RGR)⁻¹RGa`:
 - Select traits and assign economic weights
-- The index accounts for genetic covariance between traits and prediction accuracies
+- The index accounts for covariance among predicted GEBVs and prediction accuracies
 - Results show derived coefficients alongside your input weights so you can see how the adjustment affected the ranking
 
 ### Weighted Selection Index
 Ranks all lines using a simple z-score weighted composite score `I = Σ(wⱼ × zᵢⱼ)`:
 - Select traits and assign weights
 - Traits are standardised before combining so they are on the same scale
-- A straightforward approach when you want a transparent, assumption-free ranking
+- A straightforward approach when you want a transparent weighted ranking
 
 ---
 
@@ -140,11 +128,7 @@ All data files are in the `data/` directory.
 | `n7843_PAs_96traits.csv` | Trait prediction accuracies for global collection |
 | `Trait_Metadata_with_Synonyms.xlsx` | Trait descriptions, units, and synonyms used by the chat assistant |
 
-**Note on global collection trait naming:** The global CSVs share 13 overlapping trait columns. After merging, these appear with suffixes:
-- `_x` — value from the quality/phenotyping CSV
-- `_y` — value from the agronomic averages CSV (averaged across 3 timepoints)
-
-The chat assistant defaults to the `_y` variant when a trait is requested without a suffix.
+The app retains all 96 trait entries; it does not automatically exclude traits with PA at or below 0.5. The PA tables are used by the accuracy-adjusted index. Agronomic entries represent STI-derived predictions, while quality predictions were generated separately. Trait identifiers are distinct between the two tables, so the revised merged dataset does not require `_x`/`_y` suffixes.
 
 ---
 
@@ -169,3 +153,11 @@ start_core.sh                # Startup script (used by Docker)
 ```
 
 Both API servers must be running for the collection toggle to work. The Docker setup starts them both automatically via `start_core.sh`.
+
+## LLM model and evaluation
+
+The core and global chat modules use Claude Sonnet 5.5 (`claude-sonnet-5-5`). A structured prompt supplies trait metadata, synonyms, percentile rules and MCP tool descriptions. The model invokes local MCP tools, which communicate with the corresponding Flask API. The model does not fit genomic prediction models.
+
+A small reference-based evaluation checked percentile filters, combined trait criteria, synonym interpretation and weighted rankings against independently computed accession sets. These checks assess execution of the tested queries, not biological validity of the predictions or comprehensive robustness across all requests.
+
+This repository contains the application source and data. The GitHub repository URL is not a hosted running application; use the local or Docker setup above.
