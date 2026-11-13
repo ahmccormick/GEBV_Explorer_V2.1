@@ -1,0 +1,12 @@
+.venv/
+.venv_old/
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.env.*
+!.env.example
+*.bak
+*slider_state.json
+*genomic_selection_result.json
+*weighted_index_result.json
