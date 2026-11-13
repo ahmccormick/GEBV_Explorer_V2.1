@@ -4,6 +4,8 @@ Interactive visualization of genomic estimated breeding values (GEBVs) for Capsi
 
 
 
+![GEBV Explorer v2.1 interface](images/screenshot.png)
+
 ## Features
 
 - **Collection Toggle**: Switch between the Core Collection (n=397) and Global Collection (n=7,843) from the sidebar
